@@ -1,0 +1,78 @@
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: open-charade
+  labels:
+    app: open-charade
+    project: open-charade
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-charade
+  labels:
+    app: open-charade
+    project: open-charade
+spec:
+  type: LoadBalancer
+  ports:
+  - name: tcp
+    protocol: TCP
+    port: 8000
+  selector:
+    app: open-charade
+---
+apiVersion: v1
+kind: Route
+metadata:
+  name: open-charade
+  labels:
+    app: open-charade
+    project: open-charade
+spec:
+  to:
+    kind: Service
+    name: open-charade
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: open-charade
+  labels:
+    app: open-charade
+    project: open-charade
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-charade
+  template:
+    metadata:
+      name: open-charade
+      labels:
+        app: open-charade
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxAvailable: 1
+      type: RollingUpdate
+    spec:
+      serviceAccount: open-charade
+      containers:
+      - image: ${IMAGE_NAME}:${IMAGE_VERSION}
+        name: sws
+        command:
+        - "/app/start.sh"
+        env:
+        - name: ACTIVE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: open-charade
+          mountPath: "/app/open-charade"
+      volumes:
+      - name: open-charade
+        configMap:
+          name: open-charade
